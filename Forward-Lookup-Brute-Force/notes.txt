@@ -1,0 +1,1 @@
+A "www", "router", "mail" at the beginning of a URL is called a hostname.
