@@ -1,0 +1,9 @@
+https://github.com/areyou1or0/OSCP/blob/master/Scripts%20-%20MS08-067
+
+If Errors Exist:
+pip install impacket==0.9.11
+
+Remember to use msfvenom. Notes in script.
+Has Worked Before:
+
+python go.py 10.10.10.4 7 445
