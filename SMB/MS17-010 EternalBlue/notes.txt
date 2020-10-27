@@ -1,0 +1,7 @@
+
+Follow this:
+https://wiki.jacobshodd.com/writeups/hack-the-box/blue
+https://github.com/worawit/MS17-010
+
+Notes:
+Make sure to use sudo.
