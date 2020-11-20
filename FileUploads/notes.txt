@@ -1,0 +1,6 @@
+web.config:
+
+When you can't upload aspx or asp reverse shells:
+https://gist.githubusercontent.com/gazcbm/ea7206fbbad83f62080e0bbbeda77d9c/raw/8173f5041c9a69cc58e980717ebe044f8eff9e9f/webshell%2520web.config
+
+
