@@ -5,6 +5,6 @@ https://github.com/worawit/MS17-010
 
 Notes:
 Make sure to use sudo.
-Be careful with how you use msfvenom. Better to use the x64 (the one he used in his blog) then the windows/shell_reverse_tcp.
+Be careful with how you use msfvenom. Better to use x64 or x86 (the one he used in his blog) then the generic windows/shell_reverse_tcp.
 
 
