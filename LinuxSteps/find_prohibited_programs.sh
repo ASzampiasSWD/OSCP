@@ -7,10 +7,17 @@
 # ./unauth_files.sh 2 # Find program via locate
 # ./unauth_files.sh 3 # Find program via Find /
 # Dependencies: Need programs.txt file.
+
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as sudo"
+  exit
+fi
+
+
 while IFS= read -r line; do
   if [ $1 -eq 1 ]
   then
-    result=$(sudo apt list --installed 2>/dev/null | grep -i "$line" | wc -l) 
+    result=$(apt list --installed 2>/dev/null | grep -i "$line" | wc -l) 
     if [ $result -gt 0 ]
     then
       echo $line "+ - - - - - - - +" $result
@@ -18,7 +25,7 @@ while IFS= read -r line; do
   fi
   if [ $1 -eq 2 ]
   then
-    result=$(sudo locate -i 2>/dev/null "$line" | wc -l)
+    result=$(locate -i 2>/dev/null "$line" | wc -l)
     if [ $result -gt 0 ]
     then
       echo $line "+ - - - - - - - +" $result
@@ -26,7 +33,7 @@ while IFS= read -r line; do
   fi
   if [ $1 -eq 3 ]
   then
-    result=$(sudo find / -iname "$line" 2>/dev/null | wc -l)
+    result=$(find / -iname "$line" 2>/dev/null | wc -l)
     if [ $result -gt 0 ]
     then
       echo $line "+ - - - - - - - +" $result

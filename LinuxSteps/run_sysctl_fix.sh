@@ -1,5 +1,11 @@
 #!/bin/bash
 # Run as sudo ./run_sysctl_fix.sh.
+
+if [ "$EUID" -ne 0 ]
+  then echo "Run as sudo. Exiting. sudo ./run_sysctl_fix.sh"
+  exit
+fi
+
 # cat run_sysctl_fix.sh | awk -F '-w' {' print $2 '} | awk NF (save this to /etc/sysctl.conf)
 echo Making a Copy of /etc/sysctl.conf in /tmp/systl.conf
 cp /etc/sysctl.conf /tmp/sysctl.conf
